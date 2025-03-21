@@ -1,0 +1,4 @@
+pandas
+yfinance
+psycopg2-binary
+apache-airflow==2.7.2

@@ -1,0 +1,67 @@
+version: '3'
+services:
+  # 1) Postgres for Airflow Metadata
+  airflow-db:
+    image: postgres:14
+    container_name: airflow_db
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow_metadata
+    ports:
+      - "5433:5432"  # Expose on port 5433 on the host, so it doesn't clash with your local Postgres
+    networks:
+      - airflow_net
+
+  # 2) Postgres for Trading Data (Your user data)
+  trading-db:
+    image: postgres:14
+    container_name: trading_db
+    environment:
+      POSTGRES_USER: trading_user
+      POSTGRES_PASSWORD: trading_pass
+      POSTGRES_DB: trading
+    ports:
+      - "5434:5432"
+    networks:
+      - airflow_net
+
+  # 3) Airflow Webserver
+  airflow-webserver:
+    image: apache/airflow:2.5.1
+    container_name: airflow_webserver
+    depends_on:
+      - airflow-db
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      # Connect Airflow to the 'airflow-db' container for metadata
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow_metadata
+      AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX: "True"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+    ports:
+      - "8080:8080"
+    command: ["webserver"]
+    networks:
+      - airflow_net
+
+  # 4) Airflow Scheduler
+  airflow-scheduler:
+    image: apache/airflow:2.5.1
+    container_name: airflow_scheduler
+    depends_on:
+      - airflow-db
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db:5432/airflow_metadata
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+    command: ["scheduler"]
+    networks:
+      - airflow_net
+
+networks:
+  airflow_net:
+    driver: bridge

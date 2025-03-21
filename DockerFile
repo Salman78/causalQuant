@@ -1,0 +1,23 @@
+# Use a lightweight Python base image
+FROM python:3.10-slim
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements and install dependencies
+COPY requirements.txt .
+
+# Install system dependencies if needed (e.g., for TA-Lib, psycopg2)
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
+    && pip install --upgrade pip \
+    && pip install -r requirements.txt \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy the rest of the codebase
+COPY . .
+
+# Default command (can be overridden)
+CMD ["bash"]
